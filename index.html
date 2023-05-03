@@ -9,6 +9,13 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.0/css/all.min.css" />
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+    <!-- Prism CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/themes/prism.min.css" rel="stylesheet" />
+    <!-- Prism JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/prism.min.js"></script>
+    <!-- Prism Python language support -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.25.0/components/prism-python.min.js"></script>
+
 
 </head>
 
@@ -154,32 +161,495 @@
         <div class="row">
             <div class="col-lg-4 col-md-6 col-sm-12">
                 <div class="card">
-                    <img class="card-img-top" src="projet1.jpg" alt="Projet 1">
                     <div class="card-body">
                         <h4 class="card-title">Stage 1 : CPAM</h4>
                         <p class="card-text">Stage de développement en python dans la CPAM de
                             Vendée.
-                            <a href="#" class="btn btn-primary">Voir le projet</a>
+                            <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#projet1Modal">Voir le
+                                projet</a>
+                        <div class="modal fade" id="projet1Modal" tabindex="-1" aria-labelledby="projet1ModalLabel"
+                            aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="projet1ModalLabel">Code Python - Projet 1</h5>
+                                        <button type="button" class="btn-close" data-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <pre><code class="language-csharp">
+from imutils import contours
+import numpy as np
+import imutils
+import cv2
+import glob
+import os
+from pdf2image import convert_from_path
+
+# Piste a etudier :
+# utiliser toujours le meme processus pour detecter la mrz et comparer le ratio de taille de la bounding box de la carte
+# (permis, id) et calculer le ratio ou bien detecter si la police dans la bounding box de la mrz est la bonne pour confirmer doc identité
+
+
+""" def extensionCheck():
+    photo =""
+    ext = os.path.splitext(
+        r'C:\\Users\\Direction\\OneDrive\\Bureau\\OpenCV Python\\photos\\*.pdf')[-1].lower()
+    # convertis si pdf
+    if ext == ".pdf":
+        photo = convert_from_path(photo, poppler_path=r'C:\\Program Files (x86)\\poppler-22.04.0\\Library\\bin') """
+
+"""
+SEXE = {
+    "M": "Masculin",
+    "F": "Feminin"
+} """
+
+# initialize kernels
+rectKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (8, 10))
+sqKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (15, 15))
+dilateKernel = cv2.getStructuringElement(cv2.MORPH_RECT, (1, 10))
+kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
+
+cv_img = []
+for img in glob.glob(r'C:\\Users\\Direction\\OneDrive\\Bureau\\OpenCV Python\\carteidold\\*.jpg'):
+    n = cv2.imread(img)
+    if n.shape[0] < n.shape[1]:
+        n = imutils.resize(n, width=600)
+    else:
+        n = imutils.resize(n, height=600)
+    cv_img.append(n)
+
+
+def imgGet():
+    cvimg = cv_img
+    for photo in cv_img:
+        gray = cv2.cvtColor(photo, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5, 7), 0)
+        edged = cv2.Canny(blur, 0, 255)
+        cv2.imshow("Edges", edged)
+        cv2.waitKey(0)
+
+        # applying closing function
+        kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (7, 7))
+        closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
+        cv2.imshow("Closed", closed)
+        cv2.waitKey(0)
+
+        # finding_contours
+        (cnts, _) = cv2.findContours(edged.copy(),
+                                        cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+        idx = 0
+        for c in cnts:
+            x, y, w, h = cv2.boundingRect(c)
+            if w > 225 and h > 100:
+                idx += 1
+                new_img = photo[y:y + h, x:x + w]
+                cv2.imwrite(str(idx) + '.png', new_img)
+                cv2.imshow("im", new_img)
+                cv2.waitKey(0)
+        for c in cnts:
+            peri = cv2.arcLength(c, True)
+            approx = cv2.approxPolyDP(c, 0.02 * peri, True)
+            cv2.drawContours(photo, [approx], -1, (0, 255, 0), 2)
+        cv2.imshow("Output", photo)
+        cv2.waitKey(0)
+
+
+def mrzGet():
+    for image in cv_img:
+        cv2.imshow("originale", image)
+        cv2.waitKey(0)
+        # load the image, resize it, and convert it to grayscale
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        cv2.imshow("gray", gray)
+        cv2.waitKey(0)
+        # smooth the image using a 3x3 Gaussian, then apply the blackhat
+        # morphological operator to find dark regions on a light background
+        gray = cv2.GaussianBlur(gray, (7, 3), 0)
+        cv2.imshow("blur", gray)
+        cv2.waitKey(0)
+        # Applying the Black-Hat operation
+        tophat_img = cv2.morphologyEx(gray, cv2.MORPH_BLACKHAT, kernel)
+        cv2.imshow("blackhat", tophat_img)
+        cv2.waitKey(0)
+        edged = cv2.Canny(gray, 0, 255)
+        cv2.imshow("canny", edged)
+        cv2.waitKey(0)
+        # compute the Scharr gradient of the blackhat image and scale the
+        # result into the range [0, 255]
+        gradX = cv2.Sobel(tophat_img, ddepth=cv2.CV_32F, dx=1, dy=0, ksize=3)
+        gradX = np.absolute(gradX)
+        (minVal, maxVal) = (np.min(gradX), np.max(gradX))
+        gradX = (255 * ((gradX - minVal) / (maxVal - minVal))).astype("uint8")
+        # apply a closing operation using the rectangular kernel to close
+        # gaps in between letters -- then apply Otsu's thresholding method
+        gradX = cv2.morphologyEx(gradX, cv2.MORPH_CLOSE, rectKernel)
+        cv2.imshow("sobel", gradX)
+        cv2.waitKey(0)
+        thresh = cv2.threshold(gradX, 0, 255, cv2.THRESH_BINARY | cv2.THRESH_OTSU)[1]
+        cv2.imshow("thresh", thresh)
+        cv2.waitKey(0)
+        # perform another closing operation, this time using the square
+        # kernel to close gaps between lines of the MRZ, then perform a
+        # series of erosions to break apart connected components
+        thresh = cv2.erode(thresh, None, iterations=1)
+        cv2.imshow("morph1", thresh)
+        cv2.waitKey(0)
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_DILATE, dilateKernel)
+        cv2.imshow("morph2", thresh)
+        cv2.waitKey(0)
+        thresh = cv2.morphologyEx(thresh, cv2.MORPH_CLOSE, sqKernel)
+        cv2.imshow("morph3", thresh)
+        cv2.waitKey(0)
+        # during thresholding, it's possible that border pixels were
+        # included in the thresholding, so let's set 5% of the left and
+        # right borders to zero
+        p = int(image.shape[1] * 0.05)
+        thresh[:, 0:p] = 0
+        thresh[:, image.shape[1] - p:] = 0
+        # find contours in the thresholded image and sort them by their
+        # size
+        cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
+                                cv2.CHAIN_APPROX_SIMPLE)
+        cnts = imutils.grab_contours(cnts)
+        cnts = sorted(cnts, key=cv2.contourArea, reverse=True)
+        # loop over the contours
+
+    for c in cnts:
+        # compute the bounding box of the contour and use the contour to
+        # compute the aspect ratio and coverage ratio of the bounding box
+        # width to the width of the image
+        (x, y, w, h) = cv2.boundingRect(c)
+        ar = w / float(h)
+        crWidth = w / float(gray.shape[1])
+        # check to see if the aspect ratio and coverage width are within
+        # acceptable criteria
+        if ar > 4:
+            # pad the bounding box since we applied erosions and now need
+            # to re-grow it
+            pX = int((x + w) * 0.03)
+            pY = int((y + h) * 0.03)
+            (x, y) = (x - pX, y - pY)
+            (w, h) = (w + (pX * 2), h + (pY * 2))
+            # extract the ROI from the image and draw a bounding box
+            # surrounding the MRZ
+            roi = image[y:y + h, x:x + w].copy()
+            cv2.rectangle(image, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            # show the output images
+            cv2.imshow("Image", image)
+            cv2.imshow("ROI", roi)
+            cv2.waitKey(0)
+            cv2.destroyAllWindows
+
+
+imgGet()
+mrzGet()
+                                            
+                                      </code></pre>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-dismiss="modal">Fermer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-4 col-md-6 col-sm-12">
                 <div class="card">
-                    <img class="card-img-top" src="projet2.jpg" alt="Projet 2">
                     <div class="card-body">
-                        <h4 class="card-title">Projet 2</h4>
-                        <p class="card-text">Description du projet 2.</p>
-                        <a href="#" class="btn btn-primary">Voir le projet</a>
+                        <h4 class="card-title">Projet 2 : Stramatel</h4>
+                        <p class="card-text">Lors de mon 2e stage, j'ai travaillé sur une application pour faire une 
+                            grille et un menu adapté pour faire apparaitre la grille</p>
+                        <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#modalProjet2">Voir le
+                            projet</a>
+                        <div class="modal fade" id="modalProjet2" tabindex="-1" role="dialog"
+                            aria-labelledby="modalProjet2Label" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered" role="document">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="modalProjet2Label">Projet 2</h5>
+                                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                                            <span aria-hidden="true">&times;</span>
+                                        </button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <img src="assets/screen-slv3-1.png" alt="Grille 1 SLV3" class="img-fluid">
+                                        <img src="assets/screen-slv3-5.png" alt="Grille 2 SLV3" class="img-fluid">
+                                        <img src="assets/screen-slv3-2.png" alt="Pop Menu 1 SLV3" class="img-fluid">
+                                        <img src="assets/screen-slv3-3.png" alt="Pop Menu 2 SLV3" class="img-fluid">
+                                        <img src="assets/screen-slv3-4.png" alt="Pop Menu 3 SLV3" class="img-fluid">
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-dismiss="modal">Fermer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
             <div class="col-lg-4 col-md-6 col-sm-12">
                 <div class="card">
-                    <img class="card-img-top" src="projet3.jpg" alt="Projet 3">
                     <div class="card-body">
-                        <h4 class="card-title">Projet 3</h4>
-                        <p class="card-text">Description du projet 3.</p>
-                        <a href="#" class="btn btn-primary">Voir le projet</a>
+                        <h4 class="card-title">Projet 3 : Snake</h4>
+                        <p class="card-text">J'ai fais un snake en C# via WPF</p>
+                        <a href="#" class="btn btn-primary" data-toggle="modal" data-target="#projet3Modal">Voir le
+                            projet</a>
+
+                        <div class="modal fade" id="projet3Modal" tabindex="-1" aria-labelledby="projet3ModalLabel"
+                            aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered modal-lg">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="projet3ModalLabel">Code C# - Projet 3</h5>
+                                        <button type="button" class="btn-close" data-dismiss="modal"
+                                            aria-label="Close"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <pre><code class="python">
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
+using System.Windows.Shapes;
+
+namespace sneks
+{
+    public static class Snake
+    {
+        public struct Pos
+        {
+            int X;
+            int Y;
+        }
+
+        public static List<Pos> SnakeParts { get; set; } = new List<Pos>();
+        public static Pos FoodPos { get; set; }
+
+        public static Grid SnakeGrid { get; set; } = new Grid();
+        public static Rectangle snakeHead { get; set; } = new Rectangle() { Fill = Brushes.LightSeaGreen };
+        public static List<Rectangle> snakeBody { get; set; } = new List<Rectangle> { new Rectangle() { Fill = Brushes.DarkKhaki } };
+        public static eChosenDirection chosenDirection { get; set; } = eChosenDirection.None;
+        public static Rectangle food { get; set; } = new Rectangle() { Fill = Brushes.Red };
+        public static Random random { get; } = new Random((int)(DateTime.Now.Ticks % int.MaxValue));
+        public static bool Playing { get; set; } = false;
+
+        //a la place des conditions de merde a rallonge utilisées plusieurs fois peut etre utiliser
+        //l'enum eSnakeGridValue et check quelle type de grid il y a a venir //autre type de grid directement
+
+
+
+        public static void GridDesign()
+        {
+            SnakeGrid.Background = new SolidColorBrush(Colors.White);
+            for (int i = 0; i < 16; i++)
+            {
+                SnakeGrid.RowDefinitions.Add(new RowDefinition() { Height = new GridLength(31.25) });
+                SnakeGrid.ColumnDefinitions.Add(new ColumnDefinition() { Width = new GridLength(31.25) });
+
+                for (int j = 0; j < 16; j++)
+                {
+                    Border b = new Border();
+                    b.BorderBrush = new SolidColorBrush(Colors.Black);
+                    b.BorderThickness = new Thickness(0.5d);
+                    Grid.SetColumn(b, i);
+                    Grid.SetRow(b, j);
+                    SnakeGrid.Children.Add(b);
+                }
+            }
+
+            Grid.SetRow(snakeHead, (int)SnakeGrid.RowDefinitions.Count() / 2);
+            Grid.SetColumn(snakeHead, (int)SnakeGrid.ColumnDefinitions.Count() / 2);
+
+            SnakeGrid.Children.Add(snakeHead);
+
+            SnakeGrid.Children.Add(food);
+            PlaceNewFood();
+        }
+
+        private static void ColorGen()
+        {
+            byte redH = (byte)random.Next(256);
+            byte greenH = (byte)random.Next(256);
+            byte blueH = (byte)random.Next(256);
+
+            snakeHead.Fill = new SolidColorBrush(Color.FromRgb(redH, greenH, blueH));
+
+            foreach (Rectangle parts in snakeBody)
+            {
+                byte redB = (byte)random.Next(256);
+                byte greenB = (byte)random.Next(256);
+                byte blueB = (byte)random.Next(256);
+
+                parts.Fill = new SolidColorBrush(Color.FromRgb(redB, greenB, blueB));
+            }
+        }
+
+        private static void PlaceNewFood()
+        {
+            do
+            {
+                Grid.SetRow(food, random.Next(0, SnakeGrid.RowDefinitions.Count() - 1));
+                Grid.SetColumn(food, random.Next(0, SnakeGrid.ColumnDefinitions.Count() - 1));
+
+            } while (IsFoodOnSnake(food));
+
+        }
+
+        private static bool IsFoodOnSnake(Rectangle food)
+        {
+            foreach (Rectangle bodyPart in snakeBody)
+            {
+                if (food.GetValue(Grid.RowProperty).Equals(bodyPart.GetValue(Grid.RowProperty)) && //check si la food est placée sur le body du snake
+                    food.GetValue(Grid.ColumnProperty).Equals(bodyPart.GetValue(Grid.ColumnProperty)))
+                {
+                    return true;
+                }
+            }
+
+            if (food.GetValue(Grid.RowProperty).Equals(snakeHead.GetValue(Grid.RowProperty)) && //check si la food est placée sur la tete du snake
+                food.GetValue(Grid.ColumnProperty).Equals(snakeHead.GetValue(Grid.ColumnProperty)))
+            {
+                return true;
+            }
+
+            return false;
+        }
+
+
+        public static void NextStep()
+        {
+            if (!Playing)
+                return;
+
+            // current position of head
+            int headRowNext = (int)snakeHead.GetValue(Grid.RowProperty);
+            int headColNext = (int)snakeHead.GetValue(Grid.ColumnProperty);
+            
+            // next position of head
+            switch (chosenDirection)
+            {
+                case eChosenDirection.Up:
+                    headRowNext -= 1;
+                    break;
+                case eChosenDirection.Down:
+                    headRowNext += 1;
+                    break;
+                case eChosenDirection.Left:
+                    headColNext -= 1;
+                    break;
+                case eChosenDirection.Right:
+                    headColNext += 1;
+                    break;
+            }
+
+            // rainbow
+            ColorGen();
+
+            // next position of head is out of bounds ?
+            if (headRowNext < 0 || headRowNext >= SnakeGrid.RowDefinitions.Count() || headColNext < 0 || headColNext >= SnakeGrid.ColumnDefinitions.Count())
+            {
+                Lose();
+            }
+
+            // next position of snake hits itself ?
+            if (snakeBody.Count() > 1)
+            {
+                foreach (Rectangle bodyPart in snakeBody)
+                {
+                    if (headRowNext == (int)bodyPart.GetValue(Grid.RowProperty) && headColNext == (int)bodyPart.GetValue(Grid.ColumnProperty))
+                    {
+                        Lose();
+                    }
+                }
+            }
+
+            // is next position food ?
+            Rectangle newBodyPart = null;
+            if (headRowNext == (int)food.GetValue(Grid.RowProperty) && headColNext == (int)food.GetValue(Grid.ColumnProperty))
+            {
+                PlaceNewFood();
+
+                newBodyPart = new Rectangle() { Fill = Brushes.DarkKhaki };
+
+                if (snakeBody.Count() > 1)
+                {
+                    Grid.SetColumn(newBodyPart, (int)snakeBody[snakeBody.Count() - 1].GetValue(Grid.ColumnProperty));
+                    Grid.SetRow(newBodyPart, (int)snakeBody[snakeBody.Count() - 1].GetValue(Grid.RowProperty));
+                }
+                else
+                {
+                    Grid.SetColumn(newBodyPart, (int)snakeHead.GetValue(Grid.ColumnProperty));
+                    Grid.SetRow(newBodyPart, (int)snakeHead.GetValue(Grid.RowProperty));
+                }
+
+                SnakeGrid.Children.Add(newBodyPart);
+            }
+
+            // move head
+            Grid.SetRow(snakeHead, headRowNext);
+            Grid.SetColumn(snakeHead, headColNext);
+
+            // move body
+            if (snakeBody.Count() > 1)
+            {
+                for (int i = snakeBody.Count - 1; i > 0; i--)
+                {
+                    Grid.SetRow(snakeBody[i], (int)snakeBody[i - 1].GetValue(Grid.RowProperty));
+                    Grid.SetColumn(snakeBody[i], (int)snakeBody[i - 1].GetValue(Grid.ColumnProperty));
+                }
+            }
+
+            Grid.SetRow(snakeBody[0], headRowNext);
+            Grid.SetColumn(snakeBody[0], headColNext);
+
+
+            if (newBodyPart != null)
+                snakeBody.Add(newBodyPart);
+
+            // pas besoin de faire un snakeBody.Count - 1 car il y a la tete a compter aussi
+            if (snakeBody.Count == SnakeGrid.RowDefinitions.Count * SnakeGrid.ColumnDefinitions.Count)
+            {
+                System.Windows.MessageBox.Show("Congratulations! You have won the game!");
+                ResetStates();
+            }
+        }
+
+        public static void Lose()
+        {
+            System.Windows.MessageBox.Show("You lost the game!");
+            ResetStates();
+            return;
+        }
+
+        public static void ResetStates()
+        {
+            SnakeGrid = new Grid();
+            snakeHead = new Rectangle() { Fill = Brushes.LightSeaGreen };
+            snakeBody = new List<Rectangle> { new Rectangle() { Fill = Brushes.DarkKhaki } };
+            chosenDirection = eChosenDirection.None;
+            food = new Rectangle() { Fill = Brushes.Red };
+            Playing = false;
+        }
+    }
+}
+                                            
+                                  </code></pre>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary"
+                                            data-dismiss="modal">Fermer</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
